@@ -4,6 +4,14 @@ Swift Package wrapping [Ghostty](https://ghostty.org)'s terminal emulator librar
 
 > Pre-built `libghostty` static library distributed as an XCFramework binary target.
 
+> **muxr fork.** This repository is
+> [`umeranjum17/libghostty-spm`](https://github.com/umeranjum17/libghostty-spm),
+> muxr's fork of
+> [`Lakr233/libghostty-spm`](https://github.com/Lakr233/libghostty-spm). It
+> forks upstream's `main` unchanged and adds muxr-suffixed storage releases
+> (see [muxr Releases](#muxr-releases)). Upstream's code, products, and
+> license are kept as they are.
+
 ## Platforms
 
 - macOS 13+
@@ -24,7 +32,7 @@ Swift Package wrapping [Ghostty](https://ghostty.org)'s terminal emulator librar
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/Lakr233/libghostty-spm.git", from: "1.5.2"),
+    .package(url: "https://github.com/umeranjum17/libghostty-spm.git", from: "1.5.2"),
 ]
 ```
 
@@ -38,6 +46,28 @@ Then add the product you need:
     ]
 )
 ```
+
+## muxr Releases
+
+muxr's iOS app does not add this package as a SwiftPM dependency. It
+downloads the pre-built `GhosttyKit` XCFramework from a muxr-suffixed
+release and links the iOS slices it needs. The current release tag is
+`storage.1.2.11-muxr.1`:
+
+```text
+https://github.com/umeranjum17/libghostty-spm/releases/download/storage.1.2.11-muxr.1/GhosttyKit.xcframework.zip
+```
+
+A muxr-suffixed release is a storage reference on this fork: the attached
+zip is the build output, and the tag's source archive is not the build
+input. `storage.1.2.11-muxr.1` rebuilds libghostty-spm `1.2.11` with a
+backported upstream iOS callback-lifetime fix; it is not built from the
+fork's current `main`. Only the iOS device (`ios-arm64`) and simulator
+(`ios-arm64_x86_64-simulator`) slices are rebuilt for muxr; the macOS and
+Mac Catalyst slices are the untouched `1.2.11` bytes. The release body
+lists the SHA-256 of the zip and of each rebuilt library, and attaches the
+exact-source rebuild recipe. The consuming app pins the zip's URL and
+digest, so a new release means updating that pin.
 
 ## Usage
 
@@ -239,7 +269,7 @@ need it.
 Pin `1.5.2` or later (`from: "1.5.2"`). The `1.4.0` … `1.4.13` and `1.5.0`
 tags and releases were withdrawn and no longer exist; `1.5.1` is the
 oldest live tag on this track and the first with visionOS slices. Versions
-after `1.5.2` are `<major.minor>.<UTC YYYYMMDD>` (`1.5.20260903`): a
+after `1.5.2` are `<major.minor>.<UTC YYYYMMDD>` (`1.5.20260906`): a
 release lands every week with Ghostty pinned to upstream main's head of
 that Monday (`Ghostty.ref`, a commit rather than a release, because
 upstream tags rarely and main carries the fixes we need), the date is the
