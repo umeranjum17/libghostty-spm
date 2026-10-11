@@ -101,6 +101,9 @@ import XCTest
                     : "echo \(expectedPointerSelection)\n"
             #endif
             typeTerminalText(pointerSelectionCommand, in: terminal)
+            // Wait for the echoed line to render before selecting: a gesture
+            // that starts before the row exists selects the wrong text.
+            waitForTerminalText(expectedPointerSelection, in: output, timeout: 5)
             #if targetEnvironment(macCatalyst)
                 dragPointerSelection(in: terminal)
                 capture("15-pointer-selection-catalyst")
@@ -255,6 +258,21 @@ import XCTest
                 return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
             }
         #endif
+
+        /// Bounded condition wait: returns as soon as the terminal's viewport
+        /// text contains `needle`, never a fixed sleep.
+        @discardableResult
+        private func waitForTerminalText(
+            _ needle: String,
+            in element: XCUIElement,
+            timeout: TimeInterval
+        ) -> Bool {
+            let expectation = XCTNSPredicateExpectation(
+                predicate: NSPredicate(format: "value CONTAINS %@", needle),
+                object: element
+            )
+            return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
+        }
 
         private func longPressTerminal(in element: XCUIElement, offset: CGVector? = nil) {
             element.coordinate(withNormalizedOffset: offset ?? terminalInteractionOffset).press(forDuration: 0.7)

@@ -56,6 +56,14 @@ final class GhosttyTerminalAppUITests: XCTestCase {
 
         assertNoCopyMenuWithoutSelection(in: terminal)
         typeTerminalText("echo selection anchor\n", in: terminal)
+        // Wait for the echoed line to render before dragging: a drag that
+        // starts before the row exists selects the prompt instead, and the
+        // copy assertion then reads the wrong text.
+        waitForTerminalText(
+            "selection anchor",
+            in: app.descendants(matching: .any)["terminal.output"].firstMatch,
+            timeout: 8
+        )
         dragPointerSelection(in: terminal)
         capture("13-pointer-selection")
         openCopyMenuAndCopySelection(in: terminal, screenshotName: "14-pointer-copy-menu")
@@ -111,6 +119,21 @@ final class GhosttyTerminalAppUITests: XCTestCase {
     private func typeTerminalText(_ text: String, in element: XCUIElement) {
         clickTerminal(in: element)
         element.typeText(text)
+    }
+
+    /// Bounded condition wait: returns as soon as the terminal's viewport text
+    /// contains `needle`, never a fixed sleep.
+    @discardableResult
+    private func waitForTerminalText(
+        _ needle: String,
+        in element: XCUIElement,
+        timeout: TimeInterval
+    ) -> Bool {
+        let expectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value CONTAINS %@", needle),
+            object: element
+        )
+        return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
     }
 
     private func longPressTerminal(in element: XCUIElement) {
