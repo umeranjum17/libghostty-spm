@@ -18,6 +18,10 @@ final class ViewController: NSViewController {
 
     private lazy var shellSession: ShellSession = .init(shell: defaultSandboxShell)
 
+    #if DEBUG
+        private var uiTestOutputView: TerminalOutputAccessibilityView?
+    #endif
+
     private lazy var controller: TerminalController = .init { builder in
         builder.withBackgroundOpacity(0)
         builder.withCustom("keybind", "super+k=text:\\x0c")
@@ -81,6 +85,26 @@ final class ViewController: NSViewController {
             terminalView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             terminalView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
+
+        #if DEBUG
+            // UI tests wait on the rendered viewport text before pointing at
+            // it, so they need a readable accessibility element; the surface
+            // itself exposes none.
+            if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
+                let output = TerminalOutputAccessibilityView(
+                    session: shellSession.terminalSession
+                )
+                output.translatesAutoresizingMaskIntoConstraints = false
+                view.addSubview(output)
+                NSLayoutConstraint.activate([
+                    output.topAnchor.constraint(equalTo: view.topAnchor),
+                    output.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                    output.widthAnchor.constraint(equalToConstant: 1),
+                    output.heightAnchor.constraint(equalToConstant: 1),
+                ])
+                uiTestOutputView = output
+            }
+        #endif
     }
 
     private func activateTerminal() {
@@ -88,6 +112,33 @@ final class ViewController: NSViewController {
         shellSession.start()
     }
 }
+
+#if DEBUG
+    /// Debug-only accessibility mirror of the terminal viewport, used by the
+    /// UI tests to wait on rendered output. The AppKit terminal view exposes no
+    /// accessibility value of its own.
+    private final class TerminalOutputAccessibilityView: NSView {
+        private let session: InMemoryTerminalSession
+
+        init(session: InMemoryTerminalSession) {
+            self.session = session
+            super.init(frame: .zero)
+            setAccessibilityElement(true)
+            setAccessibilityIdentifier("terminal.output")
+            setAccessibilityLabel("Terminal Output")
+            alphaValue = 0.01
+        }
+
+        @available(*, unavailable)
+        required init?(coder _: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+
+        override func accessibilityValue() -> Any? {
+            session.readViewportText()
+        }
+    }
+#endif
 
 // MARK: - Terminal Callbacks
 

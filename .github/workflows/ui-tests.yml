@@ -4,6 +4,15 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
+    # UI tests exercise the built apps; docs/evidence-only changes cannot
+    # affect them. No branch protection or ruleset requires this check, so a
+    # skipped run does not block a merge.
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "data/**"
+      - ".lavish/**"
+      - "References/**"
   workflow_dispatch:
 
 permissions: {}
@@ -25,6 +34,22 @@ jobs:
 
       - name: Set up Xcode
         run: xcodebuild -version
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/org.swift.swiftpm
+            ~/Library/Caches/org.swift.swiftpm
+          key: swiftpm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: swiftpm-${{ runner.os }}-
+
+      - name: Cache derived data
+        uses: actions/cache@v4
+        with:
+          path: DerivedData
+          key: uidd-${{ github.job }}-${{ hashFiles('Example/**', 'Sources/**', 'Package.resolved') }}
+          restore-keys: uidd-${{ github.job }}-
 
       - name: Run iPhone UI Tests
         run: |
@@ -50,6 +75,7 @@ jobs:
             -project Example/MobileGhosttyApp.xcodeproj \
             -scheme MobileGhosttyApp \
             -destination "id=$UDID" \
+            -derivedDataPath DerivedData \
             -resultBundlePath "$RUNNER_TEMP/libghostty-ui-ios.xcresult" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
@@ -75,6 +101,22 @@ jobs:
 
       - name: Set up Xcode
         run: xcodebuild -version
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/org.swift.swiftpm
+            ~/Library/Caches/org.swift.swiftpm
+          key: swiftpm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: swiftpm-${{ runner.os }}-
+
+      - name: Cache derived data
+        uses: actions/cache@v4
+        with:
+          path: DerivedData
+          key: uidd-${{ github.job }}-${{ hashFiles('Example/**', 'Sources/**', 'Package.resolved') }}
+          restore-keys: uidd-${{ github.job }}-
 
       - name: Run iPad UI Tests
         run: |
@@ -103,6 +145,7 @@ jobs:
             -project Example/MobileGhosttyApp.xcodeproj \
             -scheme MobileGhosttyApp \
             -destination "id=$UDID" \
+            -derivedDataPath DerivedData \
             -resultBundlePath "$RUNNER_TEMP/libghostty-ui-ipad.xcresult" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
@@ -129,6 +172,22 @@ jobs:
       - name: Set up Xcode
         run: xcodebuild -version
 
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/org.swift.swiftpm
+            ~/Library/Caches/org.swift.swiftpm
+          key: swiftpm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: swiftpm-${{ runner.os }}-
+
+      - name: Cache derived data
+        uses: actions/cache@v4
+        with:
+          path: DerivedData
+          key: uidd-${{ github.job }}-${{ hashFiles('Example/**', 'Sources/**', 'Package.resolved') }}
+          restore-keys: uidd-${{ github.job }}-
+
       - name: Run Mac Catalyst UI Tests
         run: |
           set -euo pipefail
@@ -137,6 +196,7 @@ jobs:
             -project Example/MobileGhosttyApp.xcodeproj \
             -scheme MobileGhosttyApp \
             -destination 'platform=macOS,variant=Mac Catalyst' \
+            -derivedDataPath DerivedData \
             -resultBundlePath "$RUNNER_TEMP/libghostty-ui-maccatalyst.xcresult" \
             MACOSX_DEPLOYMENT_TARGET=15.0 \
             CODE_SIGNING_ALLOWED=NO \
@@ -164,6 +224,22 @@ jobs:
       - name: Set up Xcode
         run: xcodebuild -version
 
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/org.swift.swiftpm
+            ~/Library/Caches/org.swift.swiftpm
+          key: swiftpm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: swiftpm-${{ runner.os }}-
+
+      - name: Cache derived data
+        uses: actions/cache@v4
+        with:
+          path: DerivedData
+          key: uidd-${{ github.job }}-${{ hashFiles('Example/**', 'Sources/**', 'Package.resolved') }}
+          restore-keys: uidd-${{ github.job }}-
+
       - name: Run macOS AppKit UI Tests
         run: |
           set -euo pipefail
@@ -172,6 +248,7 @@ jobs:
             -project Example/GhosttyTerminalApp.xcodeproj \
             -scheme GhosttyTerminalApp \
             -destination 'platform=macOS' \
+            -derivedDataPath DerivedData \
             -resultBundlePath "$RUNNER_TEMP/libghostty-ui-macos.xcresult" \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
