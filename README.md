@@ -1,75 +1,137 @@
-# GhosttyKit
+<p align="center">
+  <img src="docs/readme/wordmark.svg" alt="GhosttyKit" width="360">
+</p>
 
-Swift Package wrapping [Ghostty](https://ghostty.org)'s terminal emulator library for Apple platforms.
+<p align="center">
+  <strong>Ghostty's terminal engine, as a Swift package.</strong><br>
+  Put a fast, native, GPU-rendered terminal in your iPhone, iPad, Mac or Vision Pro app with a few lines of SwiftUI.
+</p>
 
-> Pre-built `libghostty` static library distributed as an XCFramework binary target.
+<p align="center">
+  <a href="#quick-start"><img alt="Swift Package Manager" src="https://img.shields.io/badge/SwiftPM-compatible-F05138?logo=swift&logoColor=white"></a>
+  <a href="#features"><img alt="Platforms: iOS 15, macOS 13, Mac Catalyst 15, visionOS 1" src="https://img.shields.io/badge/platforms-iOS%20%7C%20macOS%20%7C%20Catalyst%20%7C%20visionOS-0A84FF"></a>
+  <a href="https://github.com/umeranjum17/libghostty-spm/tags"><img alt="Latest version" src="https://img.shields.io/github/v/tag/umeranjum17/libghostty-spm?sort=semver&filter=1.*&label=version&color=6e40c9"></a>
+  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-2da44e"></a>
+</p>
 
-> **muxr fork.** This repository is
-> [`umeranjum17/libghostty-spm`](https://github.com/umeranjum17/libghostty-spm),
-> muxr's fork of
-> [`Lakr233/libghostty-spm`](https://github.com/Lakr233/libghostty-spm). It
-> forks upstream's `main` unchanged and adds muxr-suffixed storage releases
-> (see [muxr Releases](#muxr-releases)). Upstream's code, products, and
-> license are kept as they are.
+<p align="center">
+  <img src="docs/readme/hero.png" alt="The bundled sample app: a light terminal session on iPhone with Chinese, Japanese and English input, next to a dark-theme session on iPad" width="720">
+</p>
+<p align="center"><sub>The bundled sample app in day and night, captured by this repository's UI tests on iPhone and iPad.</sub></p>
 
-## Platforms
+## Why
 
-- macOS 13+
-- iOS 15+
-- Mac Catalyst 15+
-- visionOS 1+
+[Ghostty](https://ghostty.org) has one of the best terminal cores around, but it ships as a Zig library.
+Getting it into an Apple app means cross-compiling Zig for every platform, writing C glue for rendering
+and callbacks, and building keyboard, IME, touch and clipboard handling yourself.
 
-## Products
+GhosttyKit does that work for you. You get a prebuilt XCFramework, a SwiftUI view, and an input stack
+built for touch and hardware keyboards. It works under App Sandbox, so your app can feed it bytes from
+SSH, a WebSocket or a simulated shell instead of spawning processes.
 
-| Library           | Description                                                                     |
-| ----------------- | ------------------------------------------------------------------------------- |
-| `GhosttyKit`      | Re-exports the libghostty C API (`ghostty.h`)                                   |
-| `GhosttyTerminal` | Swift wrapper — native views, SwiftUI integration, input handling, display link |
-| `GhosttyTheme`    | 485 terminal color themes from [iTerm2-Color-Schemes](https://github.com/mbadolato/iTerm2-Color-Schemes) (MIT License) |
-| `ShellCraftKit`   | Sandboxed shell emulation framework (depends on GhosttyTerminal)                |
+## See it in action
 
-## Installation
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/readme/journey-input.png" alt="iPhone terminal showing Chinese, Japanese and mixed-script input, help output, and the key bar above the keyboard" width="100%"><br>
+      <b>Type in any script</b><br>
+      <sub>Software and hardware keyboards, CJK input methods, and a key bar with Esc, Tab, arrows and sticky Ctrl/Alt/Cmd.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/readme/journey-select.png" alt="iPhone long-press selection sheet with terminal text highlighted between two handles" width="100%"><br>
+      <b>Long-press to select</b><br>
+      <sub>Touch selection hands the viewport text to your app, pre-selected around the word under the finger.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/readme/journey-macos.png" alt="macOS window running the sandboxed terminal demo" width="100%"><br>
+      <b>Native on the Mac</b><br>
+      <sub>An AppKit view with full text-input-client IME support, sandboxed like the iOS app.</sub>
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/readme/journey-themes.png" alt="Mac Catalyst theme menu with Popular, Dark and Light groups" width="100%"><br>
+      <b>485 themes, light and dark</b><br>
+      <sub>Pick a light and a dark theme; the terminal follows the system appearance.</sub>
+    </td>
+  </tr>
+</table>
+
+## Quick start
+
+**1. Add the package.** In Xcode choose *File › Add Package Dependencies…* and paste the URL, or add it to `Package.swift`:
 
 ```swift
-dependencies: [
-    .package(url: "https://github.com/umeranjum17/libghostty-spm.git", from: "1.5.2"),
-]
+.package(url: "https://github.com/umeranjum17/libghostty-spm.git", from: "1.5.2")
 ```
 
-Then add the product you need:
+**2. Link the products.** Add `GhosttyTerminal` (the terminal view) and `ShellCraftKit` (a sandboxed demo shell) to your app target:
 
 ```swift
-.target(
-    name: "YourTarget",
-    dependencies: [
-        .product(name: "GhosttyTerminal", package: "libghostty-spm"),
-    ]
-)
+.product(name: "GhosttyTerminal", package: "libghostty-spm"),
+.product(name: "ShellCraftKit", package: "libghostty-spm"),
 ```
 
-## muxr Releases
+**3. Show a terminal.** Run this view and you get the sandboxed shell from the screenshots. Try `help`, `uname` or `echo hi`:
 
-muxr's iOS app does not add this package as a SwiftPM dependency. It
-downloads the pre-built `GhosttyKit` XCFramework from a muxr-suffixed
-release and links the iOS slices it needs. The current release tag is
-`storage.1.2.11-muxr.1`:
+```swift
+import GhosttyTerminal
+import ShellCraftKit
+import SwiftUI
 
-```text
-https://github.com/umeranjum17/libghostty-spm/releases/download/storage.1.2.11-muxr.1/GhosttyKit.xcframework.zip
+struct ContentView: View {
+    @StateObject private var terminal = TerminalViewState()
+    @State private var shell = ShellSession(shell: defaultSandboxShell)
+
+    var body: some View {
+        TerminalSurfaceView(context: terminal)
+            .onAppear {
+                terminal.configuration = TerminalSurfaceOptions(
+                    backend: .inMemory(shell.terminalSession)
+                )
+                shell.start()
+            }
+    }
+}
 ```
 
-A muxr-suffixed release is a storage reference on this fork: the attached
-zip is the build output, and the tag's source archive is not the build
-input. `storage.1.2.11-muxr.1` rebuilds libghostty-spm `1.2.11` with a
-backported upstream iOS callback-lifetime fix; it is not built from the
-fork's current `main`. Only the iOS device (`ios-arm64`) and simulator
-(`ios-arm64_x86_64-simulator`) slices are rebuilt for muxr; the macOS and
-Mac Catalyst slices are the untouched `1.2.11` bytes. The release body
-lists the SHA-256 of the zip and of each rebuilt library, and attaches the
-exact-source rebuild recipe. The consuming app pins the zip's URL and
-digest, so a new release means updating that pin.
+To connect a real backend, swap the demo shell for your own `InMemoryTerminalSession`. Its `write` closure
+gets the terminal's input bytes, and `receive(_:)` feeds output back in. See the [usage guide](#reference) below.
 
-## Usage
+## Features
+
+- **Ghostty's real engine.** It runs the same VT parser, grid and Metal renderer as the Ghostty app, with CoreText fonts. Each build pins a recent commit from Ghostty's main branch.
+- **SwiftUI and UIKit/AppKit.** `TerminalSurfaceView` for SwiftUI, and `TerminalView` for UIKit (iOS, iPadOS, Catalyst, visionOS) and AppKit (macOS).
+- **Sandbox-safe I/O.** The in-memory backend never spawns a process. Your app moves the bytes, from SSH, a socket or a simulated shell. A PTY backend is there for hosts that are allowed to run processes.
+- **Touch-first input.** Software and hardware keyboards, IME composition, a customisable key bar with sticky modifiers, pointer, trackpad and mouse reporting, and pinch to zoom.
+- **Selection and clipboard.** Long-press selection, pastes that turn files and images into shell paths, drag and drop, and an OSC 52 prompt your app controls.
+- **Themes.** `GhosttyTheme` ships 485 color schemes, with separate light and dark picks.
+- **Shell integration.** Bundled bash and zsh scripts, written for this package and MIT-licensed, mark prompts so `jumpToPrompt(by:)` can move between them.
+
+| Library           | What it gives you                                                                       |
+| ----------------- | --------------------------------------------------------------------------------------- |
+| `GhosttyTerminal` | The Swift terminal: views, SwiftUI state, input, rendering loop and host-managed I/O    |
+| `GhosttyTheme`    | 485 color themes from [iTerm2-Color-Schemes](https://github.com/mbadolato/iTerm2-Color-Schemes) (MIT) |
+| `ShellCraftKit`   | A sandboxed, simulated shell for demos and tests                                        |
+| `GhosttyKit`      | The raw libghostty C API (`ghostty.h`), for advanced use                                |
+
+Requires iOS 15, macOS 13, Mac Catalyst 15 or visionOS 1, or later.
+
+## Links
+
+- **Repository:** [umeranjum17/libghostty-spm](https://github.com/umeranjum17/libghostty-spm)
+- **Versions:** [tags](https://github.com/umeranjum17/libghostty-spm/tags) · [releases](https://github.com/umeranjum17/libghostty-spm/releases) (XCFramework assets)
+- **Docs:** [API guides](https://lakr233.github.io/libghostty-spm/) on the upstream site · the [reference](#reference) below
+- **Examples:** [`Example/MobileGhosttyApp`](Example/MobileGhosttyApp) (iOS, iPadOS and Catalyst) · [`Example/GhosttyTerminalApp`](Example/GhosttyTerminalApp) (macOS)
+- **Upstream:** [Lakr233/libghostty-spm](https://github.com/Lakr233/libghostty-spm), which this repository forks · [Ghostty](https://ghostty.org)
+
+## Reference
+
+These sections cover the full API and the build. Open the one you need.
+
+<details>
+<summary><b>Usage guide</b></summary>
 
 Start from the example apps:
 
@@ -226,7 +288,7 @@ give a view (`hitTest`, `canBecomeFirstResponder`) plus
 click has been sent — override it to keep a tap from raising or dismissing
 the software keyboard.
 
-## Notes
+#### Notes
 
 - `TerminalViewState` is the SwiftUI state container.
 - `TerminalView` is the UIKit/AppKit view typealias.
@@ -234,7 +296,10 @@ the software keyboard.
 - `InMemoryTerminalSession` provides the host-managed backend used by the sandboxed example apps.
 - `GhosttyThemeCatalog` exposes bundled iTerm2 color schemes.
 
-## Building from Source
+</details>
+
+<details>
+<summary><b>Building from source</b></summary>
 
 The package downloads a pre-built XCFramework. To rebuild libghostty from the Ghostty source:
 
@@ -264,7 +329,10 @@ component installed (`xcodebuild -downloadComponent MetalToolchain`); the
 which could not link its build runner against that SDK, and 0.16 does not
 need it.
 
-## Versions
+</details>
+
+<details>
+<summary><b>Versions and release tags</b></summary>
 
 Pin `1.5.2` or later (`from: "1.5.2"`). The `1.4.0` … `1.4.13` and `1.5.0`
 tags and releases were withdrawn and no longer exist; `1.5.1` is the
@@ -287,7 +355,10 @@ package tag's `Package.swift` downloads one of these. Those and the still
 older `storage.*` tags are XCFramework assets, not package versions. SPM
 should not depend on them.
 
-## Trimmed Build
+</details>
+
+<details>
+<summary><b>Trimmed build: what differs from upstream Ghostty</b></summary>
 
 The bundled `libghostty` is a trimmed build optimized for sandboxed, embedded use on Apple platforms.
 
@@ -313,6 +384,33 @@ The bundled `libghostty` is a trimmed build optimized for sandboxed, embedded us
 | libc++ availability              | No               | **Added**        | Zig's libc++ headers built with Apple availability annotations; `__libcpp_verbose_abort` shipped in the archive so apps launch below iOS 16.3 / macOS 13.3. |
 | Scroll remainder fix             | No               | **Added**        | Wheel scrolling keeps its sub-row remainder instead of zeroing it.                                                                                   |
 | History replay                   | No               | **Added**        | `ghostty_surface_write_buffer_replay` feeds reconstructed history through the parser with terminal protocol responses suppressed.                     |
+
+</details>
+
+<details>
+<summary><b>Fork releases</b></summary>
+
+muxr's iOS app does not add this package as a SwiftPM dependency. It
+downloads the pre-built `GhosttyKit` XCFramework from a muxr-suffixed
+release and links the iOS slices it needs. The current release tag is
+`storage.1.2.11-muxr.1`:
+
+```text
+https://github.com/umeranjum17/libghostty-spm/releases/download/storage.1.2.11-muxr.1/GhosttyKit.xcframework.zip
+```
+
+A muxr-suffixed release is a storage reference on this fork: the attached
+zip is the build output, and the tag's source archive is not the build
+input. `storage.1.2.11-muxr.1` rebuilds libghostty-spm `1.2.11` with a
+backported upstream iOS callback-lifetime fix; it is not built from the
+fork's current `main`. Only the iOS device (`ios-arm64`) and simulator
+(`ios-arm64_x86_64-simulator`) slices are rebuilt for muxr; the macOS and
+Mac Catalyst slices are the untouched `1.2.11` bytes. The release body
+lists the SHA-256 of the zip and of each rebuilt library, and attaches the
+exact-source rebuild recipe. The consuming app pins the zip's URL and
+digest, so a new release means updating that pin.
+
+</details>
 
 ## License
 
