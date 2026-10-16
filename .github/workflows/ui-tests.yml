@@ -4,15 +4,6 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
-    # UI tests exercise the built apps; docs/evidence-only changes cannot
-    # affect them. No branch protection or ruleset requires this check, so a
-    # skipped run does not block a merge.
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
-      - "data/**"
-      - ".lavish/**"
-      - "References/**"
   workflow_dispatch:
 
 permissions: {}
@@ -22,8 +13,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The branch rule requires "UI Tests Gate", so this workflow must run on
+  # every PR: no paths-ignore. A docs-only change (*.md, docs/**, LICENSE)
+  # skips the macOS jobs instead; a manual run always runs them.
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - name: Checkout
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      # The PR merge commit's first parent is the base tip, so this is the PR's diff.
+      - name: Detect non-docs changes
+        id: diff
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_EVENT_NAME" != pull_request ]; then
+            code=true
+          else
+            git diff --name-only HEAD^1 HEAD | tee changed.txt
+            if grep -qvE '\.md$|^docs/|^LICENSE$' changed.txt; then code=true; else code=false; fi
+          fi
+          echo "code=$code" | tee -a "$GITHUB_OUTPUT"
+
   ios-iphone:
     name: iPhone Simulator UI Tests
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: macos-26
     timeout-minutes: 30
     steps:
@@ -91,6 +113,8 @@ jobs:
 
   ios-ipad:
     name: iPad Simulator UI Tests
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: macos-26
     timeout-minutes: 30
     steps:
@@ -161,6 +185,8 @@ jobs:
 
   mac-catalyst:
     name: Mac Catalyst UI Tests
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: macos-26
     timeout-minutes: 30
     steps:
@@ -213,6 +239,8 @@ jobs:
 
   macos-appkit:
     name: macOS AppKit UI Tests
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: macos-26
     timeout-minutes: 30
     steps:
@@ -261,3 +289,17 @@ jobs:
           name: libghostty-ui-macos-xcresult
           path: ${{ runner.temp }}/libghostty-ui-macos.xcresult
           retention-days: 7
+
+  gate:
+    name: UI Tests Gate
+    needs: [changes, ios-iphone, ios-ipad, mac-catalyst, macos-appkit]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every job to pass or be skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for r in $RESULTS; do
+            case "$r" in success|skipped) ;; *) echo "a required job ended $r: $RESULTS"; exit 1 ;; esac
+          done
