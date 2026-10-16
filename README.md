@@ -15,7 +15,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/readme/hero.png" alt="The bundled sample app: a light terminal session on iPhone with Chinese, Japanese and English input, next to a dark-theme session on iPad" width="720">
+  <img src="docs/readme/hero.png" alt="The bundled sample app in day and night: a light terminal session on iPhone with Chinese, Japanese and English input, above a dark-theme session strip" width="720">
 </p>
 <p align="center"><sub>The bundled sample app in day and night, captured by this repository's UI tests on iPhone and iPad.</sub></p>
 
