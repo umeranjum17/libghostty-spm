@@ -4,15 +4,6 @@ on:
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened]
-    # Docs/evidence-only changes cannot affect the build, so skip the run
-    # rather than spend macOS minutes on it. No branch protection or ruleset
-    # requires this check, so a skipped run does not block a merge.
-    paths-ignore:
-      - "**/*.md"
-      - "docs/**"
-      - "data/**"
-      - ".lavish/**"
-      - "References/**"
 
 # Zero-scope GITHUB_TOKEN: PR runs untrusted contributor code, so the
 # token gets no permissions at all. Public repo, so checkout works
@@ -24,8 +15,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # The branch rule requires "Build & Test Gate", so this workflow must run on
+  # every PR: no paths-ignore. A docs-only change (*.md, docs/**, LICENSE)
+  # skips the macOS job instead. The license check stays on every PR, since a
+  # .md file can carry license text too.
+  changes:
+    name: Changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.diff.outputs.code }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      # The PR merge commit's first parent is the base tip, so this is the PR's diff.
+      - name: Detect non-docs changes
+        id: diff
+        run: |
+          set -euo pipefail
+          git diff --name-only HEAD^1 HEAD | tee changed.txt
+          if grep -qvE '\.md$|^docs/|^LICENSE$' changed.txt; then code=true; else code=false; fi
+          echo "code=$code" | tee -a "$GITHUB_OUTPUT"
+
+      - name: Check Licenses
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zsh >/dev/null
+          ./Script/check-licenses.sh
+
   build-test:
     name: Build & Test
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: macos-26
     timeout-minutes: 30
     steps:
@@ -56,8 +80,19 @@ jobs:
           key: deriveddata-${{ runner.os }}-${{ hashFiles('Package.resolved', 'Sources/**', 'Package.swift') }}
           restore-keys: deriveddata-${{ runner.os }}-
 
-      - name: Check Licenses
-        run: ./Script/check-licenses.sh
-
       - name: Build Package Matrix
         run: ./Script/test.sh
+
+  gate:
+    name: Build & Test Gate
+    needs: [changes, build-test]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every job to pass or be skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          for r in $RESULTS; do
+            case "$r" in success|skipped) ;; *) echo "a required job ended $r: $RESULTS"; exit 1 ;; esac
+          done
